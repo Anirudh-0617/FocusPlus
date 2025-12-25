@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { LanguageProvider } from "@/hooks/useLanguage";
 import { ZoomProvider } from "@/hooks/useZoom";
+import { StudySessionProvider } from "@/contexts/StudySessionContext";
 import { ZoomControls } from "@/components/ZoomControls";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
@@ -50,14 +51,16 @@ const App = () => (
     <AuthProvider>
       <LanguageProvider>
         <ZoomProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <AppRoutes />
-              <ZoomControls />
-            </BrowserRouter>
-          </TooltipProvider>
+          <StudySessionProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <AppRoutes />
+                <ZoomControls />
+              </BrowserRouter>
+            </TooltipProvider>
+          </StudySessionProvider>
         </ZoomProvider>
       </LanguageProvider>
     </AuthProvider>

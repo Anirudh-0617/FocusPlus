@@ -1,5 +1,6 @@
 import { ReactNode, useState } from "react";
 import { AppSidebar } from "./AppSidebar";
+import { ActiveSessionIndicator } from "@/components/shared/ActiveSessionIndicator";
 import { cn } from "@/lib/utils";
 
 interface AppLayoutProps {
@@ -15,6 +16,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       <main className={cn("transition-all duration-300", collapsed ? "pl-16" : "pl-64")}>
         <div className="min-h-screen">{children}</div>
       </main>
+      <ActiveSessionIndicator />
     </div>
   );
 }

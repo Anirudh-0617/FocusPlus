@@ -1,12 +1,10 @@
-import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
+import { useStudySession } from "@/contexts/StudySessionContext";
 import { Play, Pause, Square, Timer, Clock } from "lucide-react";
+import { useState } from "react";
 
 interface StudySessionTimerProps {
   defaultSubject?: string;
@@ -14,92 +12,36 @@ interface StudySessionTimerProps {
 }
 
 export function StudySessionTimer({ defaultSubject, onSessionComplete }: StudySessionTimerProps) {
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const [isRunning, setIsRunning] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const [subject, setSubject] = useState(defaultSubject || "Study Session");
-  const [startTime, setStartTime] = useState<Date | null>(null);
+  const {
+    isRunning,
+    isPaused,
+    elapsedSeconds,
+    subject: currentSubject,
+    startSession,
+    pauseSession,
+    resumeSession,
+    endSession,
+    formatTime,
+  } = useStudySession();
 
-  // Timer effect
-  useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
-
-    if (isRunning && !isPaused) {
-      interval = setInterval(() => {
-        setElapsedSeconds((prev) => prev + 1);
-      }, 1000);
-    }
-
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [isRunning, isPaused]);
-
-  const formatTime = (totalSeconds: number) => {
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-
-    if (hours > 0) {
-      return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
-    }
-    return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
-  };
+  const [inputSubject, setInputSubject] = useState(defaultSubject || "Study Session");
 
   const handleStart = () => {
-    setIsRunning(true);
-    setIsPaused(false);
-    setStartTime(new Date());
-    setElapsedSeconds(0);
-    toast({
-      title: "Session Started",
-      description: `Started studying: ${subject}`,
-    });
+    startSession(inputSubject);
   };
 
-  const handlePause = () => {
-    setIsPaused(!isPaused);
-  };
-
-  const handleStop = useCallback(async () => {
-    if (!user || !startTime) return;
-
-    const durationMinutes = Math.max(1, Math.round(elapsedSeconds / 60));
-    const endedAt = new Date();
-
-    try {
-      const { error } = await supabase.from("study_sessions").insert({
-        user_id: user.id,
-        subject: subject,
-        started_at: startTime.toISOString(),
-        ended_at: endedAt.toISOString(),
-        duration_minutes: durationMinutes,
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "Session Completed!",
-        description: `${subject} - ${formatTime(elapsedSeconds)} recorded.`,
-      });
-
-      // Reset state
-      setIsRunning(false);
-      setIsPaused(false);
-      setElapsedSeconds(0);
-      setStartTime(null);
-      onSessionComplete?.();
-    } catch (error) {
-      console.error("Error saving session:", error);
-      toast({
-        title: "Error",
-        description: "Failed to save session",
-        variant: "destructive",
-      });
+  const handlePauseResume = () => {
+    if (isPaused) {
+      resumeSession();
+    } else {
+      pauseSession();
     }
-  }, [user, startTime, elapsedSeconds, subject, toast, onSessionComplete]);
+  };
+
+  const handleStop = async () => {
+    await endSession();
+    onSessionComplete?.();
+  };
 
   return (
     <Card className="border-primary/20">
@@ -116,8 +58,8 @@ export function StudySessionTimer({ defaultSubject, onSessionComplete }: StudySe
               <Label htmlFor="subject">Subject / Topic</Label>
               <Input
                 id="subject"
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
+                value={inputSubject}
+                onChange={(e) => setInputSubject(e.target.value)}
                 placeholder="What are you studying?"
               />
             </div>
@@ -135,7 +77,7 @@ export function StudySessionTimer({ defaultSubject, onSessionComplete }: StudySe
               </div>
               <p className="text-sm text-muted-foreground mt-2 flex items-center justify-center gap-1">
                 <Clock className="h-3.5 w-3.5" />
-                {subject}
+                {currentSubject}
               </p>
               {isPaused && (
                 <span className="inline-block mt-2 px-2 py-0.5 rounded bg-warning/20 text-warning text-xs">
@@ -147,7 +89,7 @@ export function StudySessionTimer({ defaultSubject, onSessionComplete }: StudySe
             {/* Controls */}
             <div className="flex gap-2">
               <Button
-                onClick={handlePause}
+                onClick={handlePauseResume}
                 variant="outline"
                 className="flex-1 gap-2"
               >
