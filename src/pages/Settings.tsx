@@ -56,14 +56,17 @@ export default function Settings() {
         .maybeSingle();
 
       if (error && error.code !== "PGRST116") throw error;
-      
+
       if (data) {
+        // Check current theme from DOM if DB value is null
+        const currentTheme = document.documentElement.classList.contains("dark") ? "dark" : "light";
+
         setProfile({
           full_name: data.full_name || "",
           study_goal: data.study_goal || "",
           daily_focus_hours: data.daily_focus_hours || 4,
           notification_enabled: data.notification_enabled ?? true,
-          theme_preference: data.theme_preference || "dark",
+          theme_preference: data.theme_preference || currentTheme,
         });
       }
     } catch (error) {
@@ -117,7 +120,7 @@ export default function Settings() {
   useEffect(() => {
     // Only apply theme when explicitly set (not null), prevents flash on initial load
     if (profile.theme_preference === null) return;
-    
+
     if (profile.theme_preference === "dark") {
       document.documentElement.classList.add("dark");
     } else {

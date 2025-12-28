@@ -87,11 +87,11 @@ export function StudySessionTimer({ defaultSubject, onSessionComplete }: StudySe
             </div>
 
             {/* Controls */}
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button
                 onClick={handlePauseResume}
                 variant="outline"
-                className="flex-1 gap-2"
+                className="flex-1 gap-2 min-w-[120px]"
               >
                 {isPaused ? (
                   <>
@@ -108,7 +108,7 @@ export function StudySessionTimer({ defaultSubject, onSessionComplete }: StudySe
               <Button
                 onClick={handleStop}
                 variant="destructive"
-                className="flex-1 gap-2"
+                className="flex-1 gap-2 min-w-[120px]"
               >
                 <Square className="h-4 w-4" />
                 End Session

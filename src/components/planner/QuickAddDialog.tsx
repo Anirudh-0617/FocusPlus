@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils";
 interface QuickAddDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  defaultDate?: Date;
   onAdd: (task: {
     title: string;
     subject: string | null;
@@ -33,11 +34,21 @@ interface QuickAddDialogProps {
   }) => Promise<void>;
 }
 
-export function QuickAddDialog({ open, onOpenChange, onAdd }: QuickAddDialogProps) {
+export function QuickAddDialog({ open, onOpenChange, onAdd, defaultDate }: QuickAddDialogProps) {
   const [title, setTitle] = useState("");
   const [subject, setSubject] = useState("");
   const [priority, setPriority] = useState("medium");
   const [dueDate, setDueDate] = useState<Date | null>(null);
+
+  useEffect(() => {
+    if (open && defaultDate) {
+      setDueDate(defaultDate);
+    } else if (!open) {
+      // Optional: clear on close if desired, but retaining state might be better UX? 
+      // For this specific bug fix, ensuring open sets it is enough.
+      // Actually, let's just set it when it opens.
+    }
+  }, [open, defaultDate]);
   const [estimatedMinutes, setEstimatedMinutes] = useState("");
   const [loading, setLoading] = useState(false);
 

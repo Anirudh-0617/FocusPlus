@@ -112,7 +112,55 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
         return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
     }, []);
 
-    const startSession = useCallback((sessionSubject: string) => {
+    const playNotification = async (type: 'start' | 'end') => {
+        try {
+            if (!user) return;
+            const { data } = await supabase
+                .from("profiles")
+                .select("notification_enabled")
+                .eq("user_id", user.id)
+                .maybeSingle();
+
+            if (data && data.notification_enabled === false) return;
+
+            const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+            if (!AudioContext) return;
+
+            const ctx = new AudioContext();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+
+            const now = ctx.currentTime;
+
+            if (type === 'start') {
+                // Rising chime for start
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(523.25, now); // C5
+                osc.frequency.exponentialRampToValueAtTime(783.99, now + 0.1); // G5
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+                osc.start(now);
+                osc.stop(now + 0.5);
+            } else {
+                // Success chord for end
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(783.99, now); // G5
+                osc.frequency.exponentialRampToValueAtTime(523.25, now + 0.2); // C5
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
+                osc.start(now);
+                osc.stop(now + 0.6);
+            }
+        } catch (error) {
+            console.error("Error playing notification:", error);
+        }
+    };
+
+    const startSession = useCallback(async (sessionSubject: string) => {
+        await playNotification('start');
         setIsRunning(true);
         setIsPaused(false);
         setStartTime(new Date());
@@ -122,7 +170,7 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
             title: "Session Started",
             description: `Started studying: ${sessionSubject}`,
         });
-    }, [toast]);
+    }, [toast, user]);
 
     const pauseSession = useCallback(() => {
         setIsPaused(true);
@@ -148,6 +196,8 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
             });
 
             if (error) throw error;
+
+            await playNotification('end');
 
             toast({
                 title: "Session Completed!",

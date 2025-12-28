@@ -95,7 +95,7 @@ export default function Planner() {
         .eq("user_id", user!.id);
 
       if (error) throw error;
-      
+
       toast({ title: "Task deleted", description: "The task has been removed." });
       fetchTasks();
     } catch (error) {
@@ -154,20 +154,20 @@ export default function Planner() {
         const errorData = await response.json();
         throw new Error(errorData.error || "Failed to optimize");
       }
-      
+
       const data = await response.json();
       const changes = data.optimization?.schedule_changes || [];
       const summary = data.optimization?.overall_summary || "Schedule analyzed.";
-      
+
       setScheduleChanges(changes);
       setScheduleSummary(summary);
       setScheduleDialogOpen(true);
     } catch (error) {
       console.error("Error optimizing:", error);
-      toast({ 
-        title: "Error", 
-        description: error instanceof Error ? error.message : "Failed to optimize schedule", 
-        variant: "destructive" 
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to optimize schedule",
+        variant: "destructive"
       });
     } finally {
       setOptimizing(false);
@@ -183,27 +183,27 @@ export default function Planner() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${session?.access_token}`,
         },
-        body: JSON.stringify({ 
-          userId: user!.id, 
-          applyChanges: true, 
-          proposedChanges: scheduleChanges 
+        body: JSON.stringify({
+          userId: user!.id,
+          applyChanges: true,
+          proposedChanges: scheduleChanges
         }),
       });
 
       if (!response.ok) throw new Error("Failed to apply changes");
 
-      toast({ 
-        title: "Schedule Updated!", 
-        description: `Successfully rescheduled ${scheduleChanges.length} tasks.` 
+      toast({
+        title: "Schedule Updated!",
+        description: `Successfully rescheduled ${scheduleChanges.length} tasks.`
       });
       setScheduleDialogOpen(false);
       fetchTasks();
     } catch (error) {
       console.error("Error applying changes:", error);
-      toast({ 
-        title: "Error", 
-        description: "Failed to apply schedule changes", 
-        variant: "destructive" 
+      toast({
+        title: "Error",
+        description: "Failed to apply schedule changes",
+        variant: "destructive"
       });
     } finally {
       setApplyingChanges(false);
@@ -213,7 +213,7 @@ export default function Planner() {
   const handleAddRevisionToTimetable = async (topic: string, sessions: number) => {
     try {
       const startDate = new Date();
-      
+
       for (let i = 0; i < sessions; i++) {
         const sessionDate = new Date(startDate);
         sessionDate.setDate(startDate.getDate() + i + 1);
@@ -332,6 +332,7 @@ export default function Planner() {
           open={quickAddOpen}
           onOpenChange={setQuickAddOpen}
           onAdd={handleQuickAdd}
+          defaultDate={selectedDate}
         />
 
         {/* Missed Session Replan Dialog */}

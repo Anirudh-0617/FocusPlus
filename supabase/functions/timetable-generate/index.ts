@@ -128,30 +128,57 @@ serve(async (req) => {
 
     const today = new Date().toISOString().split("T")[0];
 
-    const systemPrompt = `You are an AI study schedule optimizer. Your job is to reschedule tasks to help the student complete them more easily. Analyze the workload per day and redistribute tasks to avoid overwhelming days. Always move tasks to realistic dates and explain each change.`;
+    const systemPrompt = `You are an intelligent, student-first AI study scheduler.
+    Your goal is to reduce stress, preserve stability, and improve completion — NOT to rearrange tasks unnecessarily.
 
-    const userPrompt = `Analyze and reschedule this student's tasks:
+    HARD CONSTRAINTS (NON-NEGOTIABLE):
+    1. MAXIMUM subjects per day = 2 (HARD LIMIT).
+    2. A day with ONLY ONE subject is VALID and IMMUTABLE.
+    3. A day with TWO well-paired subjects (1 High + 1 Med/Low) is VALID & IMMUTABLE.
+    4. If a day is VALID => DO NOT MOVE ANY TASK.
 
-TODAY'S DATE: ${today}
+    CRITICAL NO-MOVE RULE:
+    - If a day has 1 subject: KEEP IT. Do NOT auto-fill it.
+    - If a day has 2 valid subjects: KEEP IT.
+    - If an overdue task is alone on its day: KEEP IT THERE.
+    - Optimization Theatre is FORBIDDEN. If the schedule works, CHANGE NOTHING.
 
-PENDING TASKS:
-${JSON.stringify(taskListForAI, null, 2)}
+    WHEN TO RESCHEDULE:
+    - Only if a day has >2 subjects.
+    - Only if a day has 2 High-priority subjects.
+    - Only if total duration violates safety limits.
 
-TASKS PER DAY:
-${Object.entries(tasksByDate).map(([date, t]) => `${date}: ${t.length} tasks (${t.map(task => task.title).join(", ")})`).join("\n")}
+    OUTPUT INSTRUCTIONS:
+    - "schedule_changes": Return an EMPTY array if no hard constraints are violated.
+    - "insights":
+        - If NO changes: You MUST output a MOTIVATIONAL message in "overall_summary" (e.g., "Today’s plan is already optimal. Focus on [Subject] — you’ve got this.").
+        - If changes: Explain strictly which hard constraint was violated.
+    `;
 
-STUDY PATTERNS:
-- Peak productivity hours: ${peakHours.length > 0 ? peakHours.map(h => `${h}:00`).join(", ") : "Evening (18:00)"}
-- Daily focus capacity: ${profile?.daily_focus_hours || 4} hours
-- Recommended max tasks per day: 3-4
+    const userPrompt = `Analyze the next 6 days.
 
-INSTRUCTIONS:
-1. Identify overloaded days (more than 3 tasks)
-2. Identify tasks with passed due dates that need rescheduling
-3. Redistribute tasks to balance the workload
-4. Keep high-priority tasks closer to their original dates
-5. For each moved task, provide a clear reason
-6. Tasks without dates should be scheduled based on priority`;
+    CONTEXT:
+    - Today: ${today}
+    - Daily Focus Capacity: ${profile?.daily_focus_hours || 4} hours
+    - Current Tasks (mapped by Date):
+    ${Object.entries(tasksByDate).map(([date, t]) =>
+      `  [${date}]: ${t.length} tasks -> ${t.map(task =>
+        `{Title: "${task.title}", Subject: "${task.subject || 'General'}", Priority: "${task.priority}"}`
+      ).join(", ")}`
+    ).join("\n")}
+
+    PENDING TASKS (Include Overdue):
+    ${JSON.stringify(taskListForAI.map(t => ({
+      ...t,
+      is_overdue: t.due_date && t.due_date < today,
+      inferred_priority: t.priority === 'high' ? 'High' : (t.subject?.match(/math|physics|chem/i) ? 'High' : 'Medium')
+    })), null, 2)}
+
+    INSTRUCTIONS:
+    1. Check every day. Is it Valid (1 or 2 subjects)? -> LOCK IT.
+    2. Are there any days with 3+ subjects or 2 High subjects? -> Fix ONLY those.
+    3. If everything is valid, return NO changes and a motivational message.
+    `;
 
     console.log("Calling OpenAI for schedule optimization...");
 
